@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Q
@@ -18,11 +19,12 @@ from .forms import RoomForm
 
 
 def login_page(request):
+    page = "login"
     if request.user.is_authenticated:
         return redirect('home')
 
     if request.method == 'POST':
-        username = request.POST.get('username')
+        username = request.POST.get('username').lower()
         password = request.POST.get('password')
 
         try:
@@ -37,13 +39,32 @@ def login_page(request):
             return redirect('home')
         else:
             messages.error(request, 'username and password does not match.')
-    context = {}
+    context = {'page': page}
     return render(request, 'base/login_register.html', context)
 
 
 def logout_user(request):
     logout(request)
     return redirect('home')
+
+
+def register_page(request):
+    form = UserCreationForm()
+
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.username = user.username.lower()
+            user.save()
+            login(request, user)
+            return redirect('home')
+        else:
+            messages.error(
+                request, 'An error occured during user registration')
+
+    context = {'form': form}
+    return render(request, 'base/login_register.html', context)
 
 
 def home(request):
